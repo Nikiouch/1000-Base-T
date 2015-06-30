@@ -1,0 +1,3 @@
+imresize(imread('resources\images\folder@2x.png'), [32 32], 'bilinear')
+imresize(imread('resources\images\choose.png'), [32 32], 'bilinear')
+imresize(imread('resources\images\settings.png'), [20 20], 'bilinear')
