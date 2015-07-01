@@ -60,8 +60,25 @@ guidata(hObject, handles);
 
 % UIWAIT makes Test wait for user response (see UIRESUME)
 % uiwait(handles.figure_testbed);
+
+% Объявление глобальных переменных
 global color;
+global codingState;
+global inactiveColor; 
+global backColor;
+global scramblerState;
+global decodeState;
+global descramblerState;
+
+backColor=[0.9412    0.9412    0.9412];
+inactiveColor=[0.5020 0.5020 0.5020];
 color=[1.0 0.6 0];
+scramblerState=false;
+decodeState=false;
+descramblerState=false;
+codingState=false;
+
+%
 
 
 % --- Outputs from this function are returned to the command line.
@@ -128,26 +145,33 @@ function btn_load_Callback(hObject, eventdata, handles)
 % hObject    handle to btn_load (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+%Глобальные переменные
 global color;
+
+%Проверка поля edt_input, если пусто, то чтение из файла. 
 data=get(handles.edt_input,'String');
 if isempty(data)
     [FileName,PathName,FilterIndex] = uigetfile({'*.txt','text files'});
 end
+%Операции над данными. И создание вектора для построение меандра.
 data=str2num(data);
 handles.data=fliplr(data);
 guidata(handles.figure_testbed,handles);
-
 disLength=50;
 meandr=zeros(1,length(data)*disLength);
 for i=1:length(data)
     meandr((i-1)*disLength+1:(i-1)*disLength+disLength)=data(i);
 end
-
+%Построение графика меандра, а так же редактирование осей.
 axes(handles.axes1);
 plot(meandr,'color',color);
 set(handles.axes1,'YLimMode','manual');
 set(handles.axes1,'YLim',[-2 2]);
 set(handles.axes1,'XTick',[]);
+%Изменения свойств объектов программы. 
+set(handles.btn_scrambler,'enable','on');
+set(handles.btn_descrambler,'enable','on');
 
 
 % --- Executes on button press in btn_channel1.
@@ -155,38 +179,31 @@ function btn_channel1_Callback(hObject, eventdata, handles)
 % hObject    handle to btn_channel1 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-color=[1.0 0.6 0];
-inactiveColor=get(handles.btn_channel1,'ForegroundColor');
-if color~=inactiveColor
-    backColor=get(handles.btn_channel1,'BackgroundColor');
-    set(handles.btn_channel1,'ForegroundColor',color);
-    set(handles.btn_channel2,'ForegroundColor',inactiveColor);
-    set(handles.btn_channel3,'ForegroundColor',inactiveColor);
-    set(handles.btn_channel4,'ForegroundColor',inactiveColor);
-    set(handles.btn_channel1,'BackgroundColor','white');
-    set(handles.btn_channel2,'BackgroundColor',backColor);
-    set(handles.btn_channel3,'BackgroundColor',backColor);
-    set(handles.btn_channel4,'BackgroundColor',backColor);
-end
+global color inactiveColor backColor;
+set(handles.btn_channel1,'ForegroundColor',color);
+set(handles.btn_channel2,'ForegroundColor',inactiveColor);
+set(handles.btn_channel3,'ForegroundColor',inactiveColor);
+set(handles.btn_channel4,'ForegroundColor',inactiveColor);
+set(handles.btn_channel1,'BackgroundColor','white');
+set(handles.btn_channel2,'BackgroundColor',backColor);
+set(handles.btn_channel3,'BackgroundColor',backColor);
+set(handles.btn_channel4,'BackgroundColor',backColor);
+
 
 % --- Executes on button press in btn_channel2.
 function btn_channel2_Callback(hObject, eventdata, handles)
 % hObject    handle to btn_channel2 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-color=[1.0 0.6 0];
-inactiveColor=get(handles.btn_channel2,'ForegroundColor');
-if color~=inactiveColor
-    backColor=get(handles.btn_channel2,'BackgroundColor');
-    set(handles.btn_channel2,'ForegroundColor',color);
-    set(handles.btn_channel3,'ForegroundColor',inactiveColor);
-    set(handles.btn_channel4,'ForegroundColor',inactiveColor);
-    set(handles.btn_channel1,'ForegroundColor',inactiveColor);
-    set(handles.btn_channel2,'BackgroundColor','white');
-    set(handles.btn_channel3,'BackgroundColor',backColor);
-    set(handles.btn_channel4,'BackgroundColor',backColor);
-    set(handles.btn_channel1,'BackgroundColor',backColor);
-end
+global color inactiveColor backColor;
+set(handles.btn_channel2,'ForegroundColor',color);
+set(handles.btn_channel3,'ForegroundColor',inactiveColor);
+set(handles.btn_channel4,'ForegroundColor',inactiveColor);
+set(handles.btn_channel1,'ForegroundColor',inactiveColor);
+set(handles.btn_channel2,'BackgroundColor','white');
+set(handles.btn_channel3,'BackgroundColor',backColor);
+set(handles.btn_channel4,'BackgroundColor',backColor);
+set(handles.btn_channel1,'BackgroundColor',backColor);
 
 
 % --- Executes on button press in btn_channel4.
@@ -194,19 +211,15 @@ function btn_channel4_Callback(hObject, eventdata, handles)
 % hObject    handle to btn_channel4 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-color=[1.0 0.6 0];
-inactiveColor=get(handles.btn_channel4,'ForegroundColor');
-if color~=inactiveColor
-    backColor=get(handles.btn_channel4,'BackgroundColor');
-    set(handles.btn_channel4,'ForegroundColor',color);
-    set(handles.btn_channel3,'ForegroundColor',inactiveColor);
-    set(handles.btn_channel2,'ForegroundColor',inactiveColor);
-    set(handles.btn_channel1,'ForegroundColor',inactiveColor);
-    set(handles.btn_channel4,'BackgroundColor','white');
-    set(handles.btn_channel3,'BackgroundColor',backColor);
-    set(handles.btn_channel2,'BackgroundColor',backColor);
-    set(handles.btn_channel1,'BackgroundColor',backColor);
-end
+global color inactiveColor backColor;
+set(handles.btn_channel4,'ForegroundColor',color);
+set(handles.btn_channel3,'ForegroundColor',inactiveColor);
+set(handles.btn_channel2,'ForegroundColor',inactiveColor);
+set(handles.btn_channel1,'ForegroundColor',inactiveColor);
+set(handles.btn_channel4,'BackgroundColor','white');
+set(handles.btn_channel3,'BackgroundColor',backColor);
+set(handles.btn_channel2,'BackgroundColor',backColor);
+set(handles.btn_channel1,'BackgroundColor',backColor);
 
 
 % --- Executes on button press in btn_channel3.
@@ -214,32 +227,63 @@ function btn_channel3_Callback(hObject, eventdata, handles)
 % hObject    handle to btn_channel3 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-color=[1.0 0.6 0];
-inactiveColor=get(handles.btn_channel3,'ForegroundColor');
-if color~=inactiveColor
-    backColor=get(handles.btn_channel3,'BackgroundColor');
-    set(handles.btn_channel3,'ForegroundColor',color);
-    set(handles.btn_channel2,'ForegroundColor',inactiveColor);
-    set(handles.btn_channel1,'ForegroundColor',inactiveColor);
-    set(handles.btn_channel4,'ForegroundColor',inactiveColor);
-    set(handles.btn_channel3,'BackgroundColor','white');
-    set(handles.btn_channel2,'BackgroundColor',backColor);
-    set(handles.btn_channel1,'BackgroundColor',backColor);
-    set(handles.btn_channel4,'BackgroundColor',backColor);
-end
-
+global color inactiveColor backColor;
+set(handles.btn_channel3,'ForegroundColor',color);
+set(handles.btn_channel2,'ForegroundColor',inactiveColor);
+set(handles.btn_channel1,'ForegroundColor',inactiveColor);
+set(handles.btn_channel4,'ForegroundColor',inactiveColor);
+set(handles.btn_channel3,'BackgroundColor','white');
+set(handles.btn_channel2,'BackgroundColor',backColor);
+set(handles.btn_channel1,'BackgroundColor',backColor);
+set(handles.btn_channel4,'BackgroundColor',backColor);
 
 % --- Executes on button press in btn_scrambler.
 function btn_scrambler_Callback(hObject, eventdata, handles)
 % hObject    handle to btn_scrambler (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-if or(~isfield(handles,'data'),isempty(handles.data))
+global color inactiveColor backColor scramblerState;
+%Проверка существование данных, если их нет, то завершить выполнение
+%функции
+if ~isfield(handles,'data')
     msgbox('Нет данных!');
 else
-    =handles.data;
-    temp=zeros(floor(length(data)/8)*8);
-    temp(1:length(data))=
+    if isempty(handles.data)
+        msgbox('Нет данных!');
+    else
+        scramblerState=true;
+        temp=handles.data;
+        data=zeros(1,ceil(length(temp)/8)*8);
+        data(1:length(temp))=temp;
+        startIndex=1;
+        endIndex=8;
+        cs=[0 0 0];
+        scr=round(random('uniform',zeros(1,33),ones(1,33)));
+        handles.scr=scr;
+        guidata(handles.figure_testbed,handles);
+        for i=1:ceil(length(temp)/8)
+            [scr sy sx sg]=wordgenerator(scr);
+            sc=scramblerbitgenerator(sy,sx,'SEND',0,0,1,[0 0 0]);
+            data(startIndex:endIndex)=datascrambler(data( startIndex:endIndex ),sc,1,0,cs,'OK',0);
+            startIndex=(i*8)+1;
+            endIndex=(i+1)*8;
+        end
+        str=num2str(data);
+        disLength=50;
+        meandr=zeros(1,length(data)*disLength);
+        for i=1:length(data)
+            meandr((i-1)*disLength+1:(i-1)*disLength+disLength)=data(i);
+        end
+        set(handles.edt_input,'String',str);
+        axes(handles.axes1);
+        plot(meandr,'color',color);
+        set(handles.axes1,'YLimMode','manual');
+        set(handles.axes1,'YLim',[-2 2]);
+        set(handles.axes1,'XTick',[]);
+        handles.data=data;
+        guidata(handles.figure_testbed,handles);
+        set(handles.btn_scrambler,'enable','off');
+    end
 end
 
 
@@ -382,7 +426,33 @@ function btn_descrambler_Callback(hObject, eventdata, handles)
 % hObject    handle to btn_descrambler (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+if ~isfield(handles,'data')
+    msgbox('Нет данных!');
+else
+    if isempty(handles.data)
+        msgbox('Нет данных!');
+    else
+        temp=handles.data;
+        data=zeros(1,ceil(length(temp)/8)*8);
+        data(1:length(temp))=temp;
+        startIndex=1;
+        endIndex=8;
+        cs=[0 0 0];
+        scr=handles.scr;
+        for i=1:ceil(length(temp)/8)
+            [scr sy sx sg]=wordgenerator(scr);
+            sc=scramblerbitgenerator(sy,sx,'SEND',0,0,1,[0 0 0]);
+            data(startIndex:endIndex)=datascrambler(data( startIndex:endIndex ),sc,1,0,cs,'OK',0);
+            startIndex=(i*8)+1;
+            endIndex=(i+1)*8;
+        end
+        str=num2str(fliplr(data));
+        set(handles.edt_output,'String',str);
+        handles.data=data;
+        guidata(handles.figure_testbed,handles);
+        set(handles.btn_descrambler,'enable','off');
+    end
+end
 
 % --- Executes on button press in chbox_equalizer.
 function chbox_equalizer_Callback(hObject, eventdata, handles)
