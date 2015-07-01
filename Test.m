@@ -22,7 +22,7 @@ function varargout = Test(varargin)
 
 % Edit the above text to modify the response to help Test
 
-% Last Modified by GUIDE v2.5 30-Jun-2015 14:15:40
+% Last Modified by GUIDE v2.5 01-Jul-2015 18:40:28
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -78,8 +78,42 @@ decodeState=false;
 descramblerState=false;
 codingState=false;
 
-%
+%Отключение кнопок
+set(handles.btn_scrambler,'enable','off');
+set(handles.btn_descrambler,'enable','off');
+set(handles.btn_coding,'enable','off');
+set(handles.btn_decoding,'enable','off');
+set(handles.btn_applyTransmit,'enable','off');
+set(handles.btn_applyRecieve,'enable','off');
+enableaddparams(handles,'off');
+enablechannels(handles,'off')
+set(handles.chbox_equalizer,'enable','off');
+set(handles.btn_equalizer,'enable','off');
 
+function enablechannels(handles,status)
+if isequal(status,'on')
+    set(handles.btn_channel1,'String','1 канал');
+    set(handles.btn_channel2,'String','2 анал');
+    set(handles.btn_channel3,'String','3 канал');
+    set(handles.btn_channel4,'String','4 канал');
+else
+    set(handles.btn_channel1,'String','График');
+    set(handles.btn_channel2,'String','');
+    set(handles.btn_channel3,'String','');
+    set(handles.btn_channel4,'String','');
+end
+set(handles.btn_channel2,'enable',status);
+set(handles.btn_channel3,'enable',status);
+set(handles.btn_channel4,'enable',status);
+set(handles.ax_transmitSpectre,'visible',status);
+
+function enableaddparams(handles,status)
+    set(handles.chbox_pulseShaping,'enable',status);
+    set(handles.chbox_noise,'enable',status);
+    set(handles.chbox_phase,'enable',status);
+    set(handles.btn_pulseShaping,'enable',status);
+    set(handles.btn_noise,'enable',status);
+    set(handles.btn_phase,'enable',status);
 
 % --- Outputs from this function are returned to the command line.
 function varargout = Test_OutputFcn(hObject, eventdata, handles) 
@@ -150,12 +184,15 @@ function btn_load_Callback(hObject, eventdata, handles)
 global color;
 
 %Проверка поля edt_input, если пусто, то чтение из файла. 
-data=get(handles.edt_input,'String');
-if isempty(data)
-    [FileName,PathName,FilterIndex] = uigetfile({'*.txt','text files'});
+data=[];
+method=questdlg('Откуда загрузить данные?','Загрузка данных','File','Field','Cancel');
+if isequal(method,'File')
+    data=choosefromfile(handles,data);
+else
+    data=get(handles.edt_input,'String');
+    data=str2num(data);
 end
 %Операции над данными. И создание вектора для построение меандра.
-data=str2num(data);
 handles.data=fliplr(data);
 guidata(handles.figure_testbed,handles);
 disLength=50;
@@ -164,15 +201,27 @@ for i=1:length(data)
     meandr((i-1)*disLength+1:(i-1)*disLength+disLength)=data(i);
 end
 %Построение графика меандра, а так же редактирование осей.
-axes(handles.axes1);
+axes(handles.ax_transmit);
 plot(meandr,'color',color);
-set(handles.axes1,'YLimMode','manual');
-set(handles.axes1,'YLim',[-2 2]);
-set(handles.axes1,'XTick',[]);
+set(handles.ax_transmit,'YLimMode','manual');
+set(handles.ax_transmit,'YLim',[-2 2]);
+set(handles.ax_transmit,'XTick',[]);
 %Изменения свойств объектов программы. 
-set(handles.btn_scrambler,'enable','on');
-set(handles.btn_descrambler,'enable','on');
+if ~isempty(data)
+    set(handles.btn_scrambler,'enable','on');
+    set(handles.btn_coding,'enable','on');
+else
+    set(handles.btn_scrambler,'enable','off');
+end
 
+function data=choosefromfile(handles,data)
+[FileName,PathName] = uigetfile({'*.txt','text files'});
+if ~isequal(FileName,0)
+    file=fopen([PathName FileName],'r');
+    data=fscanf(file,'%1d');
+    fclose(file);
+    set(handles.edt_input,'String',num2str(data'));
+end
 
 % --- Executes on button press in btn_channel1.
 function btn_channel1_Callback(hObject, eventdata, handles)
@@ -282,14 +331,16 @@ else
         end
         %Построение графика меандра скремблированной информации.
         set(handles.edt_input,'String',str);
-        axes(handles.axes1);
+        axes(handles.ax_transmit);
         plot(meandr,'color',color);
-        set(handles.axes1,'YLimMode','manual');
-        set(handles.axes1,'YLim',[-2 2]);
-        set(handles.axes1,'XTick',[]);
+        set(handles.ax_transmit,'YLimMode','manual');
+        set(handles.ax_transmit,'YLim',[-2 2]);
+        set(handles.ax_transmit,'XTick',[]);
+        %Обновление поля data и откючение btn_scrambler
         handles.data=data;
         guidata(handles.figure_testbed,handles);
         set(handles.btn_scrambler,'enable','off');
+        set(handles.btn_descrambler,'enable','on');
     end
 end
 
@@ -306,7 +357,9 @@ function btn_coding_Callback(hObject, eventdata, handles)
 % hObject    handle to btn_coding (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+enablechannels(handles,'on')
+set(handles.btn_coding,'enable','off');
+enableaddparams(handles,'on');
 
 % --- Executes on button press in chbox_pulseShaping.
 function chbox_pulseShaping_Callback(hObject, eventdata, handles)
@@ -439,6 +492,7 @@ else
     if isempty(handles.data)
         msgbox('Нет данных!');
     else
+        %Объявление переменных и их заполнение.
         temp=handles.data;
         data=zeros(1,ceil(length(temp)/8)*8);
         data(1:length(temp))=temp;
@@ -446,6 +500,7 @@ else
         endIndex=8;
         cs=[0 0 0];
         scr=handles.scr;
+        %Дескремблирование
         for i=1:ceil(length(temp)/8)
             [scr sy sx sg]=wordgenerator(scr);
             sc=scramblerbitgenerator(sy,sx,'SEND',0,0,1,[0 0 0]);
@@ -453,8 +508,9 @@ else
             startIndex=(i*8)+1;
             endIndex=(i+1)*8;
         end
-        str=num2str(fliplr(data));
-        set(handles.edt_output,'String',str);
+        data=num2str(fliplr(data));
+        set(handles.edt_output,'String',data);
+        %Обновление поля data и откючение btn_descrambler.
         handles.data=data;
         guidata(handles.figure_testbed,handles);
         set(handles.btn_descrambler,'enable','off');
@@ -537,7 +593,15 @@ function btn_save_Callback(hObject, eventdata, handles)
 % hObject    handle to btn_save (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+data=get(handles.edt_output,'String');
+if ~isempty(data)
+    [FileName, DirName] = uiputfile({'*.txt','text file'},'Сохранить данные','output');
+    if ~isequal(FileName,0)
+        file=fopen([DirName FileName],'w+');
+        fprintf(file,'%1d',str2num(data));
+        fclose(file);
+    end
+end
 
 % --- If Enable == 'on', executes on mouse press in 5 pixel border.
 % --- Otherwise, executes on mouse press in 5 pixel border or over edt_input.
