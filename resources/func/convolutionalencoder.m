@@ -5,8 +5,8 @@ csPrev=cs;
 cs(1)=csPrev(3);
 sd(9)=cs(1);
 if(tx_enable)
-    cs(3)=xor(sd(7),csPrev(2));
-    cs(2)=xor(sd(6),csPrev(1));
+    cs(3)=xor(sd(8),csPrev(2));
+    cs(2)=xor(sd(7),csPrev(1));
 else
     cs(1:2)=0;
 end

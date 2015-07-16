@@ -22,7 +22,7 @@ function varargout = Test(varargin)
 
 % Edit the above text to modify the response to help Test
 
-% Last Modified by GUIDE v2.5 01-Jul-2015 18:40:28
+% Last Modified by GUIDE v2.5 06-Jul-2015 16:03:10
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -60,7 +60,12 @@ guidata(hObject, handles);
 
 % UIWAIT makes Test wait for user response (see UIRESUME)
 % uiwait(handles.figure_testbed);
+% Начальное состояние
+initialvalues(handles);
 
+
+
+function initialvalues(handles)
 % Объявление глобальных переменных
 global color;
 global codingState;
@@ -69,7 +74,12 @@ global backColor;
 global scramblerState;
 global decodeState;
 global descramblerState;
+global currentChannel;
+global samples
+global fs
 
+fs=125e6;
+currentChannel=1;
 backColor=[0.9412    0.9412    0.9412];
 inactiveColor=[0.5020 0.5020 0.5020];
 color=[1.0 0.6 0];
@@ -77,6 +87,19 @@ scramblerState=false;
 decodeState=false;
 descramblerState=false;
 codingState=false;
+samples=100;
+%очистка графиков
+close(handles.ax_transmitSpectrum);
+ 
+axes(handles.ax_transmit);
+plot([] ,'color',color);
+set(handles.ax_transmit,'YTick',[]);
+set(handles.ax_transmit,'XTick',[]);
+
+axes(handles.ax_transmitSpectrum);
+plot([] ,'color',color);
+set(handles.ax_transmit,'YTick',[]);
+set(handles.ax_transmit,'XTick',[]);
 
 %Отключение кнопок
 set(handles.btn_scrambler,'enable','off');
@@ -90,10 +113,22 @@ enablechannels(handles,'off')
 set(handles.chbox_equalizer,'enable','off');
 set(handles.btn_equalizer,'enable','off');
 
+%Выделение первой кнопки 
+set(handles.btn_channel1,'ForegroundColor',color);
+set(handles.btn_channel2,'ForegroundColor',inactiveColor);
+set(handles.btn_channel3,'ForegroundColor',inactiveColor);
+set(handles.btn_channel4,'ForegroundColor',inactiveColor);
+set(handles.btn_channel1,'BackgroundColor','white');
+set(handles.btn_channel2,'BackgroundColor',backColor);
+set(handles.btn_channel3,'BackgroundColor',backColor);
+set(handles.btn_channel4,'BackgroundColor',backColor);
+
+
+
 function enablechannels(handles,status)
 if isequal(status,'on')
     set(handles.btn_channel1,'String','1 канал');
-    set(handles.btn_channel2,'String','2 анал');
+    set(handles.btn_channel2,'String','2 канал');
     set(handles.btn_channel3,'String','3 канал');
     set(handles.btn_channel4,'String','4 канал');
 else
@@ -102,10 +137,11 @@ else
     set(handles.btn_channel3,'String','');
     set(handles.btn_channel4,'String','');
 end
+set(handles.btn_channel1,'enable',status);
 set(handles.btn_channel2,'enable',status);
 set(handles.btn_channel3,'enable',status);
 set(handles.btn_channel4,'enable',status);
-set(handles.ax_transmitSpectre,'visible',status);
+set(handles.ax_transmitSpectrum,'visible',status);
 
 function enableaddparams(handles,status)
     set(handles.chbox_pulseShaping,'enable',status);
@@ -114,8 +150,38 @@ function enableaddparams(handles,status)
     set(handles.btn_pulseShaping,'enable',status);
     set(handles.btn_noise,'enable',status);
     set(handles.btn_phase,'enable',status);
-
 % --- Outputs from this function are returned to the command line.
+
+function drawspectrum(handles)
+global currentChannel color fs samples;
+
+[f, Y, NFFT]=spectrumest(handles.sampledSignal(currentChannel,:),fs*samples);
+axes(handles.ax_transmitSpectrum);
+plot(f, 2*abs(Y(1:NFFT/2+1)),'color',color);
+set(handles.ax_transmitSpectrum,'YLimMode','manual');
+set(handles.ax_transmitSpectrum,'YLim',[min(Y)-1 max(Y)+1]);
+
+function drawgraphic(handles)
+global currentChannel color;
+
+y=handles.sampledSignal(currentChannel,:);
+x=handles.time;
+axes(handles.ax_transmit);
+pl=plot(x, y,'color',color);
+handles.plot=pl;
+guidata(handles.figure_tesbed,handles);
+set(handles.edt_input,'String',num2str(handles.signal(currentChannel,:)));
+set(handles.ax_transmit,'YLimMode','manual');
+set(handles.ax_transmit,'YLim',[-3 3]); 
+
+function meandr=createsamples(handles)
+global samples;
+data=handles.data;
+meandr=zeros(1,length(data)*samples);
+for i=1:length(data)
+    meandr((i-1)*samples+1:(i-1)*samples+samples)=data(i);
+end
+
 function varargout = Test_OutputFcn(hObject, eventdata, handles) 
 % varargout  cell array for returning output args (see VARARGOUT);
 % hObject    handle to figure
@@ -181,11 +247,12 @@ function btn_load_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 %Глобальные переменные
-global color;
+global color ;
 
-%Проверка поля edt_input, если пусто, то чтение из файла. 
+%Проверка поля edt_input, если пусто, то чтение из файла.
+enablechannels(handles,'off');
 data=[];
-method=questdlg('Откуда загрузить данные?','Загрузка данных','File','Field','Cancel');
+method=questdlg('Откуда загрузить данные?','Загрузка данных','File','Field','File');
 if isequal(method,'File')
     data=choosefromfile(handles,data);
 else
@@ -195,11 +262,9 @@ end
 %Операции над данными. И создание вектора для построение меандра.
 handles.data=fliplr(data);
 guidata(handles.figure_testbed,handles);
-disLength=50;
-meandr=zeros(1,length(data)*disLength);
-for i=1:length(data)
-    meandr((i-1)*disLength+1:(i-1)*disLength+disLength)=data(i);
-end
+
+meandr=createsamples(handles);
+
 %Построение графика меандра, а так же редактирование осей.
 axes(handles.ax_transmit);
 plot(meandr,'color',color);
@@ -211,7 +276,7 @@ if ~isempty(data)
     set(handles.btn_scrambler,'enable','on');
     set(handles.btn_coding,'enable','on');
 else
-    set(handles.btn_scrambler,'enable','off');
+    initialvalues(handles);
 end
 
 function data=choosefromfile(handles,data)
@@ -228,7 +293,8 @@ function btn_channel1_Callback(hObject, eventdata, handles)
 % hObject    handle to btn_channel1 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global color inactiveColor backColor;
+global color inactiveColor backColor currentChannel;
+currentChannel=1;
 set(handles.btn_channel1,'ForegroundColor',color);
 set(handles.btn_channel2,'ForegroundColor',inactiveColor);
 set(handles.btn_channel3,'ForegroundColor',inactiveColor);
@@ -238,13 +304,16 @@ set(handles.btn_channel2,'BackgroundColor',backColor);
 set(handles.btn_channel3,'BackgroundColor',backColor);
 set(handles.btn_channel4,'BackgroundColor',backColor);
 
+drawgraphic(handles);
+drawspectrum(handles);
 
 % --- Executes on button press in btn_channel2.
 function btn_channel2_Callback(hObject, eventdata, handles)
 % hObject    handle to btn_channel2 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global color inactiveColor backColor;
+global color inactiveColor backColor currentChannel;
+currentChannel=2;
 set(handles.btn_channel2,'ForegroundColor',color);
 set(handles.btn_channel3,'ForegroundColor',inactiveColor);
 set(handles.btn_channel4,'ForegroundColor',inactiveColor);
@@ -254,13 +323,16 @@ set(handles.btn_channel3,'BackgroundColor',backColor);
 set(handles.btn_channel4,'BackgroundColor',backColor);
 set(handles.btn_channel1,'BackgroundColor',backColor);
 
+drawgraphic(handles);
+drawspectrum(handles);
 
 % --- Executes on button press in btn_channel4.
 function btn_channel4_Callback(hObject, eventdata, handles)
 % hObject    handle to btn_channel4 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global color inactiveColor backColor;
+global color inactiveColor backColor currentChannel;
+currentChannel=4;
 set(handles.btn_channel4,'ForegroundColor',color);
 set(handles.btn_channel3,'ForegroundColor',inactiveColor);
 set(handles.btn_channel2,'ForegroundColor',inactiveColor);
@@ -270,13 +342,16 @@ set(handles.btn_channel3,'BackgroundColor',backColor);
 set(handles.btn_channel2,'BackgroundColor',backColor);
 set(handles.btn_channel1,'BackgroundColor',backColor);
 
+drawgraphic(handles);
+drawspectrum(handles);
 
 % --- Executes on button press in btn_channel3.
 function btn_channel3_Callback(hObject, eventdata, handles)
 % hObject    handle to btn_channel3 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global color inactiveColor backColor;
+global color inactiveColor backColor currentChannel;
+currentChannel=3;
 set(handles.btn_channel3,'ForegroundColor',color);
 set(handles.btn_channel2,'ForegroundColor',inactiveColor);
 set(handles.btn_channel1,'ForegroundColor',inactiveColor);
@@ -286,6 +361,8 @@ set(handles.btn_channel2,'BackgroundColor',backColor);
 set(handles.btn_channel1,'BackgroundColor',backColor);
 set(handles.btn_channel4,'BackgroundColor',backColor);
 
+drawgraphic(handles);
+drawspectrum(handles);
 % --- Executes on button press in btn_scrambler.
 function btn_scrambler_Callback(hObject, eventdata, handles)
 % hObject    handle to btn_scrambler (see GCBO)
@@ -294,55 +371,44 @@ function btn_scrambler_Callback(hObject, eventdata, handles)
 global color inactiveColor backColor scramblerState;
 %Проверка существование данных, если их нет, то завершить выполнение
 %функции.
-if ~isfield(handles,'data')
-    msgbox('Нет данных!');
-else
-    if isempty(handles.data)
-        msgbox('Нет данных!');
-    else
-        %Назначение состояние кнопки на 'нажата' и создание переменных с их
-        %заполнением
-        scramblerState=true;
-        temp=handles.data;
-        data=zeros(1,ceil(length(temp)/8)*8);
-        data(1:length(temp))=temp;
-        startIndex=1;
-        endIndex=8;
-        cs=[0 0 0];
-        %Генерация scr и сохранение в handles
-        scr=round(random('uniform',zeros(1,33),ones(1,33)));
-        handles.scr=scr;
-        guidata(handles.figure_testbed,handles);
-        %Скремблирование информации
-        for i=1:ceil(length(temp)/8)
-            [scr sy sx sg]=wordgenerator(scr);
-            sc=scramblerbitgenerator(sy,sx,'SEND',0,0,1,[0 0 0]);
-            data(startIndex:endIndex)=datascrambler(data( startIndex:endIndex ),sc,1,0,cs,'OK',0);
-            startIndex=(i*8)+1;
-            endIndex=(i+1)*8;
-        end
-        %Вывод информации в поле edt_input и создание вектора для постоения
-        %меандра.
-        str=num2str(data);
-        disLength=50;
-        meandr=zeros(1,length(data)*disLength);
-        for i=1:length(data)
-            meandr((i-1)*disLength+1:(i-1)*disLength+disLength)=data(i);
-        end
-        %Построение графика меандра скремблированной информации.
-        set(handles.edt_input,'String',str);
-        axes(handles.ax_transmit);
-        plot(meandr,'color',color);
-        set(handles.ax_transmit,'YLimMode','manual');
-        set(handles.ax_transmit,'YLim',[-2 2]);
-        set(handles.ax_transmit,'XTick',[]);
-        %Обновление поля data и откючение btn_scrambler
-        handles.data=data;
-        guidata(handles.figure_testbed,handles);
-        set(handles.btn_scrambler,'enable','off');
-        set(handles.btn_descrambler,'enable','on');
-    end
+%Назначение состояние кнопки на 'нажата' и создание переменных с их
+%заполнением
+scramblerState=true;
+temp=handles.data;
+data=zeros(1,ceil(length(temp)/8)*8);
+data(1:length(temp))=temp;
+startIndex=1;
+endIndex=8;
+cs=[0 0 0];
+%Генерация scr и сохранение в handles
+scr=round(random('uniform',zeros(1,33),ones(1,33)));
+handles.scr=scr;
+guidata(handles.figure_testbed,handles);
+%Скремблирование информации
+for i=1:ceil(length(temp)/8)
+    [scr sy sx sg]=wordgenerator(scr);
+    sc=scramblerbitgenerator(sy,sx,'SEND',0,0,1,[0 0 0]);
+    data(startIndex:endIndex)=datascrambler(data( startIndex:endIndex ),sc,1,0,cs,'OK',0);
+    startIndex=(i*8)+1;
+    endIndex=(i+1)*8;
 end
+%Вывод информации в поле edt_input и создание вектора для постоения
+%меандра.
+str=num2str(data);
+meandr=createsamples(handles);
+%Построение графика меандра скремблированной информации.
+set(handles.edt_input,'String',str);
+axes(handles.ax_transmit);
+plot(meandr,'color',color);        
+set(handles.ax_transmit,'YLimMode','manual');
+set(handles.ax_transmit,'YLim',[-2 2]);
+set(handles.ax_transmit,'XTick',[]);
+%Обновление поля data и откючение btn_scrambler
+handles.data=data;
+guidata(handles.figure_testbed,handles);
+set(handles.btn_scrambler,'enable','off');
+set(handles.btn_descrambler,'enable','on');
+   
 
 
 % --- Executes on button press in btn_applyTransmit.
@@ -357,9 +423,44 @@ function btn_coding_Callback(hObject, eventdata, handles)
 % hObject    handle to btn_coding (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-enablechannels(handles,'on')
+global codingState samples;
+codingState=true;
+enablechannels(handles,'on');
 set(handles.btn_coding,'enable','off');
 enableaddparams(handles,'on');
+
+
+temp=handles.data;
+data=zeros(1,ceil(length(temp)/8)*8);
+data(1:length(temp))=temp;
+cs=[0 0 0];
+startIndex=1;
+endIndex=8;
+for i=1:ceil(length(data)/8)
+    sd=data( startIndex:endIndex );
+    [sd,cs]=convolutionalencoder(sd,cs,1);
+    [table1,table2]=initializeLookupTables;
+    if(sd(9)==1)
+        index=bi2de(wrev(sd(7:8)));
+        index=index*4+1;
+        signal(1:4,i)=table2(bi2de(wrev(sd(1:6)))+1,index:index+3);
+    else
+        index=bi2de(wrev(sd(7:8)));
+        index=index*4+1;
+        signal(1:4,i)=table1(bi2de(wrev(sd(1:6)))+1,index:index+3);
+    end
+    startIndex=(i*8)+1;
+    endIndex=(i+1)*8;
+end
+handles.signal=signal;
+[signal, time]=sampling(signal,samples);
+handles.sampledSignal=signal;
+handles.time=time;
+guidata(handles.figure_testbed,handles);
+
+drawgraphic(handles);
+drawspectrum(handles);
+
 
 % --- Executes on button press in chbox_pulseShaping.
 function chbox_pulseShaping_Callback(hObject, eventdata, handles)
