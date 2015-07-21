@@ -89,15 +89,14 @@ descramblerState=false;
 codingState=false;
 samples=100;
 %очистка графиков
-close(handles.ax_transmitSpectrum);
  
+cla(handles.ax_transmit);
 axes(handles.ax_transmit);
-plot([] ,'color',color);
 set(handles.ax_transmit,'YTick',[]);
 set(handles.ax_transmit,'XTick',[]);
 
+cla(handles.ax_transmitSpectrum);
 axes(handles.ax_transmitSpectrum);
-plot([] ,'color',color);
 set(handles.ax_transmit,'YTick',[]);
 set(handles.ax_transmit,'XTick',[]);
 
@@ -167,9 +166,7 @@ global currentChannel color;
 y=handles.sampledSignal(currentChannel,:);
 x=handles.time;
 axes(handles.ax_transmit);
-pl=plot(x, y,'color',color);
-handles.plot=pl;
-guidata(handles.figure_tesbed,handles);
+plot(x, y,'color',color);
 set(handles.edt_input,'String',num2str(handles.signal(currentChannel,:)));
 set(handles.ax_transmit,'YLimMode','manual');
 set(handles.ax_transmit,'YLim',[-3 3]); 
@@ -259,6 +256,7 @@ else
     data=get(handles.edt_input,'String');
     data=str2num(data);
 end
+initialvalues(handles);
 %Операции над данными. И создание вектора для построение меандра.
 handles.data=fliplr(data);
 guidata(handles.figure_testbed,handles);
@@ -392,6 +390,11 @@ for i=1:ceil(length(temp)/8)
     startIndex=(i*8)+1;
     endIndex=(i+1)*8;
 end
+%Обновление поля data и откючение btn_scrambler
+handles.data=data;
+guidata(handles.figure_testbed,handles);
+set(handles.btn_scrambler,'enable','off');
+set(handles.btn_descrambler,'enable','on');
 %Вывод информации в поле edt_input и создание вектора для постоения
 %меандра.
 str=num2str(data);
@@ -403,12 +406,6 @@ plot(meandr,'color',color);
 set(handles.ax_transmit,'YLimMode','manual');
 set(handles.ax_transmit,'YLim',[-2 2]);
 set(handles.ax_transmit,'XTick',[]);
-%Обновление поля data и откючение btn_scrambler
-handles.data=data;
-guidata(handles.figure_testbed,handles);
-set(handles.btn_scrambler,'enable','off');
-set(handles.btn_descrambler,'enable','on');
-   
 
 
 % --- Executes on button press in btn_applyTransmit.
